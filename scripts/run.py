@@ -47,7 +47,7 @@ def main():
     viz.distribution(logppl[yte == 0], logppl[yte == 1], "log perplexity (human-trained LM)",
                      "AI text is 'smoother' to a human LM", FIG / "perplexity.png")
     viz.roc(results, FIG / "roc.png")
-    imp = permutation_importance(gb.clf, gb._matrix(Xte), yte, n_repeats=5, random_state=0)
+    imp = permutation_importance(gb.clf, gb.matrix(Xte), yte, n_repeats=5, random_state=0)
     viz.feature_importance(gb.feature_names, imp.importances_mean, FIG / "feature_importance.png")
     viz.calibration(yte, results["BiLSTM-Attention"][1], FIG / "calibration.png")
     viz.adversarial(before, after, FIG / "adversarial.png")

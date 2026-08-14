@@ -57,12 +57,12 @@ class StyloGB:
         self.clf.fit(np.hstack([feature_matrix(texts), np.log1p(ppl)[:, None]]), y)
         return self
 
-    def _matrix(self, texts):
+    def matrix(self, texts):
         ppl = np.log1p([self.lm.perplexity(t) for t in texts])
         return np.hstack([feature_matrix(texts), ppl[:, None]])
 
     def predict_proba(self, texts):
-        return self.clf.predict_proba(self._matrix(list(texts)))[:, 1]
+        return self.clf.predict_proba(self.matrix(list(texts)))[:, 1]
 
     @property
     def feature_names(self):
@@ -92,7 +92,7 @@ class AttentionDetector:
     def __init__(self, maxlen=200, seed=0):
         self.maxlen, self.seed = maxlen, seed
 
-    def _encode(self, texts):
+    def encode(self, texts):
         rows = []
         for x in texts:
             ids = [self.vocab.get(t, UNK) for t in tokenize(x)][:self.maxlen]
@@ -111,7 +111,7 @@ class AttentionDetector:
         self.model = AttnLSTM(len(self.vocab))
         opt = torch.optim.Adam(self.model.parameters(), lr)
         loss_fn = nn.CrossEntropyLoss()
-        X, yt = self._encode(texts), torch.tensor(y)
+        X, yt = self.encode(texts), torch.tensor(y)
         rng = np.random.default_rng(self.seed)
         for _ in range(epochs):
             self.model.train()
@@ -124,12 +124,12 @@ class AttentionDetector:
     @torch.no_grad()
     def predict_proba(self, texts):
         self.model.eval()
-        X = self._encode(texts)
+        X = self.encode(texts)
         return torch.cat([self.model(X[s:s + 128]).softmax(1)[:, 1] for s in range(0, len(X), 128)]).numpy()
 
     @torch.no_grad()
     def attention(self, text):
         self.model.eval()
         toks = tokenize(text)[:self.maxlen]
-        _, w = self.model(self._encode([text]), return_attn=True)
+        _, w = self.model(self.encode([text]), return_attn=True)
         return toks, w[0, :len(toks)].numpy()

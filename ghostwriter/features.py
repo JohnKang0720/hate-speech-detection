@@ -16,20 +16,20 @@ FEATURE_NAMES = ["mean_sentence_len", "std_sentence_len", "mean_word_len", "std_
                  "question_ratio", "exclaim_ratio", "digit_ratio", "upper_word_ratio",
                  "bigram_repeat_ratio", "commas_per_sentence"]
 
-_WORD = re.compile(r"[A-Za-z']+")
-_TOKEN = re.compile(r"[a-z']+|[.,!?;:]")
+WORD = re.compile(r"[A-Za-z']+")
+TOKEN = re.compile(r"[a-z']+|[.,!?;:]")
 
 
 def tokenize(text):
-    return _TOKEN.findall(text.lower())
+    return TOKEN.findall(text.lower())
 
 
 def extract_features(text):
     text = (text or "").strip()
     chars = len(text) or 1
     sentences = [s for s in re.split(r"[.!?]+", text) if s.strip()]
-    sent_lens = [len(_WORD.findall(s)) for s in sentences] or [0]
-    words = _WORD.findall(text)
+    sent_lens = [len(WORD.findall(s)) for s in sentences] or [0]
+    words = WORD.findall(text)
     n = len(words) or 1
     lower = [w.lower() for w in words]
     word_lens = [len(w) for w in words] or [0]
