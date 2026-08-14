@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ghostwriter — human or AI?</title>
+<meta name="description" content="Detect whether text was written by a human or an LLM. Runs entirely in your browser." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0a0a0a;--surface:#111113;--line:#1f1f22;--line2:#151517;--ink:#e6e6e6;
+    --soft:#b5b5b5;--mute:#77787c;--chip:#17171a;--human:#5b8cff;--ai:#ff7a3c;
+    --sans:'Space Grotesk',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,36px) 80px}
+  a{color:var(--ink)}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;color:var(--mute)}
+  h1{font-size:clamp(2rem,5vw,3rem);letter-spacing:-.02em;line-height:1.04;margin:.4rem 0 .5rem;font-weight:700}
+  .lede{color:var(--soft);max-width:60ch;margin:0}
+  .grid{display:grid;gap:16px;grid-template-columns:1fr;margin-top:34px}
+  @media(min-width:860px){.grid{grid-template-columns:1.25fr 1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .card h2{font-size:.72rem;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+  textarea{width:100%;min-height:170px;resize:vertical;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-family:var(--sans);font-size:.95rem;line-height:1.55}
+  .exs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .ex{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);background:var(--chip);color:var(--soft);border-radius:999px;padding:5px 11px;cursor:pointer}
+  .ex:hover{border-color:var(--mute);color:var(--ink)}
+  .verdict{margin-top:6px}
+  .vlabel{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:.8rem;color:var(--mute)}
+  .vmain{font-size:1.35rem;font-weight:600;margin:2px 0 10px}
+  .bar{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--human),#3a3a3a 50%,var(--ai));position:relative;overflow:hidden}
+  .bar .tick{position:absolute;top:-4px;width:3px;height:20px;background:#fff;border-radius:2px;transform:translateX(-50%);transition:left .25s ease}
+  .ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.68rem;color:var(--mute);margin-top:6px}
+  .signals{margin-top:16px;border-top:1px solid var(--line2);padding-top:14px}
+  .sig{display:flex;justify-content:space-between;gap:12px;font-size:.85rem;padding:4px 0;color:var(--soft)}
+  .sig .dir{font-family:var(--mono);font-size:.72rem}
+  .toai{color:var(--ai)}.tohuman{color:var(--human)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line2)}
+  th{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:500}
+  td.num{font-family:var(--mono);text-align:right;color:var(--soft);font-variant-numeric:tabular-nums}
+  .best td{color:var(--ink)}
+  .best .tag{font-family:var(--mono);font-size:.6rem;border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:6px;color:var(--soft)}
+  .muted{color:var(--mute);font-size:.8rem;margin-top:12px}
+  .section-label{font-family:var(--mono);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--mute);margin:52px 0 4px;display:flex;align-items:center;gap:12px}
+  .section-label::after{content:"";height:1px;flex:1;background:var(--line)}
+  .figs{margin-top:16px;display:grid;gap:16px;grid-template-columns:1fr}
+  @media(min-width:820px){.figs{grid-template-columns:1fr 1fr}}
+  figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  figure img{display:block;width:100%;background:#fff}
+  figcaption{padding:12px 16px;font-size:.82rem;color:var(--soft)}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-family:var(--mono);font-size:.75rem;color:var(--mute);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Gyo-Jin Kang · Project</p>
+    <h1>Ghostwriter</h1>
+    <p class="lede">Was this written by a human or an LLM? Paste some text and the detector below
+      scores it <b>entirely in your browser</b> — no server, no upload. It reads <i>style</i>, not
+      meaning: humans write burstier, less even prose than models do.</p>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Paste text to analyze</h2>
+      <textarea id="input" placeholder="Paste a paragraph or two…"></textarea>
+      <div class="exs" id="exs"></div>
+      <div class="verdict">
+        <div class="vlabel"><span>Verdict</span><span id="pct"></span></div>
+        <div class="vmain" id="vmain">—</div>
+        <div class="bar"><span class="tick" id="tick" style="left:50%"></span></div>
+        <div class="ends"><span>Human</span><span>AI</span></div>
+      </div>
+      <div class="signals" id="signals"></div>
+    </section>
+
+    <section class="card">
+      <h2>How the detectors compare</h2>
+      <table><thead><tr><th>Detector</th><th style="text-align:right">Acc</th><th style="text-align:right">F1</th><th style="text-align:right">AUC</th></tr></thead>
+        <tbody id="board"></tbody></table>
+      <p class="muted" id="advnote"></p>
+      <p class="muted">This page runs <b>Stylo-Logistic</b> (14 style features → logistic regression) —
+        small enough to ship as weights. The stronger <b>BiLSTM-Attention</b> model (the attention
+        mechanism carried over from my hate-speech project) is shown in the figures below.</p>
+    </section>
+  </div>
+
+  <p class="section-label">Under the hood</p>
+  <div class="figs" id="figs"></div>
+
+  <footer>
+    <span>Built by Gyo-Jin Kang · data: HC3</span>
+    <span><a href="https://github.com/JohnKang0720/hate-speech-detection">Source on GitHub ↗</a></span>
+  </footer>
+</div>
+
+<script>
+const STOP=new Set(["the","a","an","and","or","but","if","of","to","in","on","for","with","as","at","by","is","are","was","were","be","been","it","this","that","these","those","i","you","he","she","they","we","his","her","their","our","its","not","no","do","does","did","so","than","then","there","here","which","who","what","when"]);
+const WORD=/[A-Za-z']+/g;
+const NAMES=["Mean sentence length","Sentence-length variance (burstiness)","Mean word length","Word-length variance","Lexical diversity","Stopword ratio","Comma ratio","Period ratio","Question ratio","Exclamation ratio","Digit ratio","All-caps ratio","Bigram repetition","Commas per sentence"];
+const mean=a=>a.reduce((s,x)=>s+x,0)/(a.length||1);
+const std=a=>{if(a.length<2)return 0;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/a.length);};
+const cnt=(t,c)=>t.split(c).length-1;
+
+function features(text){
+  text=(text||"").trim();const chars=text.length||1;
+  const sents=text.split(/[.!?]+/).filter(s=>s.trim());
+  const sl=(sents.length?sents:[""]).map(s=>(s.match(WORD)||[]).length);
+  const words=text.match(WORD)||[];const nw=words.length||1;
+  const lower=words.map(w=>w.toLowerCase());
+  const wl=(words.length?words:[""]).map(w=>w.length);
+  const bg=[];for(let i=0;i+1<lower.length;i++)bg.push(lower[i]+" "+lower[i+1]);
+  const ub=new Set(bg).size||1;
+  return [mean(sl),std(sl),mean(wl),std(wl),new Set(lower).size/nw,
+    lower.filter(w=>STOP.has(w)).length/nw,cnt(text,",")/nw,cnt(text,".")/nw,
+    cnt(text,"?")/nw,cnt(text,"!")/nw,([...text].filter(c=>c>="0"&&c<="9").length)/chars,
+    words.filter(w=>w===w.toUpperCase()&&w!==w.toLowerCase()&&w.length>1).length/nw,
+    1-ub/Math.max(bg.length,1),cnt(text,",")/Math.max(sents.length,1)];
+}
+
+fetch("data.json").then(r=>r.json()).then(D=>{
+  const M=D.model;
+  const board=document.getElementById("board");
+  Object.entries(D.metrics).forEach(([n,m],i)=>{
+    const tr=document.createElement("tr");if(i===2)tr.className="best";
+    tr.innerHTML=`<td>${n}${i===2?'<span class="tag">best</span>':''}</td><td class="num">${m.accuracy.toFixed(3)}</td><td class="num">${m.f1.toFixed(3)}</td><td class="num">${m.auc.toFixed(3)}</td>`;
+    board.appendChild(tr);
+  });
+  if(D.adversarial&&D.adversarial.before!=null)
+    document.getElementById("advnote").innerHTML=`Robustness: Stylo-GB accuracy on AI text holds at <b>${(D.adversarial.after*100).toFixed(0)}%</b> after a light paraphrase attack (from ${(D.adversarial.before*100).toFixed(0)}%).`;
+
+  const exs=document.getElementById("exs");
+  const add=(label,txt)=>{const b=document.createElement("span");b.className="ex";b.textContent=label;b.onclick=()=>{input.value=txt;render();};exs.appendChild(b);};
+  D.examples.human.forEach((t,i)=>add(`Human #${i+1}`,t));
+  D.examples.ai.forEach((t,i)=>add(`AI #${i+1}`,t));
+
+  const FIGS=[["attention","The BiLSTM's attention — darker tokens are the ones it leans on to decide."],
+    ["roc","ROC for all three detectors; the attention model ranks best."],
+    ["burstiness","Humans vary their sentence length far more than models do."],
+    ["perplexity","AI text is 'smoother' to a language model trained on human writing."],
+    ["feature_importance","Which style signals carry the decision."],
+    ["adversarial","Accuracy on AI text before and after a light paraphrase attack."]];
+  const figs=document.getElementById("figs");
+  FIGS.forEach(([f,c])=>{const el=document.createElement("figure");el.innerHTML=`<img loading="lazy" src="figures/${f}.png" alt="${c}"><figcaption>${c}</figcaption>`;figs.appendChild(el);});
+
+  const input=document.getElementById("input");
+  function render(){
+    const t=input.value;
+    if(t.trim().split(/\s+/).length<12){document.getElementById("vmain").textContent="—";
+      document.getElementById("pct").textContent="need ~12+ words";document.getElementById("tick").style.left="50%";
+      document.getElementById("signals").innerHTML="";return;}
+    const f=features(t);
+    const zc=f.map((v,i)=>M.coef[i]*(v-M.mean[i])/M.scale[i]);
+    const z=M.intercept+zc.reduce((s,x)=>s+x,0);
+    const p=1/(1+Math.exp(-z));
+    document.getElementById("tick").style.left=(p*100)+"%";
+    document.getElementById("pct").textContent=`P(AI) = ${(p*100).toFixed(0)}%`;
+    const vm=document.getElementById("vmain");
+    vm.textContent=p>=.5?"Likely AI-written":"Likely human-written";
+    vm.style.color=p>=.5?"var(--ai)":"var(--human)";
+    const order=zc.map((c,i)=>[i,c]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,4);
+    document.getElementById("signals").innerHTML="<div class='vlabel' style='margin-bottom:6px'><span>Top signals</span><span></span></div>"+
+      order.map(([i,c])=>`<div class="sig"><span>${NAMES[i]}</span><span class="dir ${c>0?'toai':'tohuman'}">${c>0?'→ AI':'→ human'}</span></div>`).join("");
+  }
+  input.addEventListener("input",render);
+  input.value=D.examples.ai[0]||"";render();
+});
+</script>
+</body>
+</html>

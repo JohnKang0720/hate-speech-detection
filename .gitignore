@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# OS
+.DS_Store
+
+# Raw corpus (70 MB) — regenerate with scripts/prepare_data.py
+data/hc3_all.jsonl
+
+# Trained model artifacts (regenerate with scripts/train.py)
+models/

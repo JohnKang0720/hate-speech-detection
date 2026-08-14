@@ -1,0 +1,9 @@
+[project]
+name = "ghostwriter"
+version = "1.0.0"
+description = "Detect whether text was written by a human or an LLM."
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
